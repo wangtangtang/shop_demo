@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+{% block title %}后台管理 - 极客商城{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== 后台管理页专用样式（只在这个页面生效） ===== */
+    .admin-wrap { max-width: 1180px; margin: 0 auto; }
+    .admin-tabs { display: flex; gap: 10px; margin: 20px 0; }
+    .admin-tab {
+        padding: 10px 24px; border: 2px solid #dfe6e9; background: #fff;
+        border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; color: #636e72;
+    }
+    .admin-tab.active { border-color: #0984e3; color: #0984e3; background: #f0f8ff; }
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+
+    .admin-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px;
+                   overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    .admin-table th, .admin-table td { padding: 12px 14px; text-align: left;
+        border-bottom: 1px solid #f1f2f6; font-size: 14px; vertical-align: middle; }
+    .admin-table th { background: #f8f9fb; color: #2d3436; font-weight: 700; }
+    .admin-table tr:last-child td { border-bottom: none; }
+
+    .st-badge { display: inline-block; padding: 3px 12px; border-radius: 20px;
+        color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .st-pending   { background: #ffa502; }
+    .st-paid      { background: #0984e3; }
+    .st-shipped   { background: #6c5ce7; }
+    .st-completed { background: #00b894; }
+    .st-cancelled { background: #b2bec3; }
+    /* 售后状态标签（黄=审核中 / 绿=已同意 / 红=已拒绝） */
+    .as-pending  { background: #ffa502; }
+    .as-approved { background: #00b894; }
+    .as-rejected { background: #ff4757; }
+
+    /* 售后 AI 初审建议（仅“建议”，不改变工单状态；绿=建议同意/红=建议拒绝/灰=人工核实） */
+    .ai-sugg { margin-top: 6px; font-size: 12px; line-height: 1.6; }
+    .ai-sugg-tag { display: inline-block; padding: 2px 9px; border-radius: 10px;
+        color: #fff; font-size: 11px; font-weight: 600; white-space: nowrap; margin-right: 4px; }
+    .ai-approve { background: #00b894; }
+    .ai-reject  { background: #ff4757; }
+    .ai-manual  { background: #b2bec3; }
+    .ai-sugg-reason { color: #636e72; }
+    .ai-sugg-note { display: block; color: #b2bec3; font-size: 11px; margin-top: 2px; }
+
+    .admin-btn {
+        padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer;
+        font-size: 13px; font-weight: 600; color: #fff; background: #0984e3;
+    }
+    .admin-btn:hover { opacity: .88; }
+    .admin-btn.gray { background: #b2bec3; }
+    .admin-btn.red { background: #ff4757; }
+    .admin-btn.green { background: #00b894; }
+    .admin-btn:disabled { background: #dfe6e9; cursor: not-allowed; }
+
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+    .filter-btn {
+        padding: 6px 16px; border: 1px solid #dfe6e9; background: #fff; border-radius: 20px;
+        cursor: pointer; font-size: 13px; color: #636e72;
+    }
+    .filter-btn.active { background: #0984e3; color: #fff; border-color: #0984e3; }
+
+    /* 列表搜索条（与状态筛选同一行，右侧对齐；回车/按钮都触发） */
+    .search-bar { margin-left: auto; display: flex; gap: 6px; }
+    .search-input {
+        padding: 6px 12px; border: 1px solid #dfe6e9; border-radius: 20px;
+        font-size: 13px; color: #2d3436; width: 230px; box-sizing: border-box;
+    }
+    .search-input:focus { outline: none; border-color: #0984e3; }
+
+    .add-form {
+        background: #fff; padding: 18px; border-radius: 10px; margin-bottom: 18px;
+        display: grid; grid-template-columns: 2fr 1fr 1fr 2.5fr 2fr auto; gap: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06); align-items: center;
+    }
+    .add-form input {
+        padding: 9px 12px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 14px; width: 100%;
+        box-sizing: border-box;
+    }
+    .order-items-line { color: #636e72; font-size: 13px; margin-top: 4px; }
+    .admin-tip { background: #fff8e6; border: 1px solid #ffe08a; color: #8a6d1a;
+        padding: 10px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; }
+    .image-hint { font-size: 12px; color: #b2bec3; margin: 6px 2px 12px; }
+
+    /* 弹窗（发货 / 拒绝售后备注） */
+    .modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+        z-index: 999; align-items: center; justify-content: center; }
+    .modal-mask.show { display: flex; }
+    .modal-box { background: #fff; border-radius: 12px; padding: 22px 24px; width: 380px;
+        max-width: calc(100vw - 40px); box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+    .modal-box h3 { margin: 0 0 14px; font-size: 17px; color: #2d3436; }
+    .modal-box .form-group { margin-bottom: 14px; }
+    .modal-box label { display: block; font-size: 13px; font-weight: 600; color: #2d3436; margin-bottom: 6px; }
+    .modal-box select, .modal-box input, .modal-box textarea {
+        width: 100%; padding: 9px 12px; border: 1px solid #dfe6e9; border-radius: 6px;
+        font-size: 14px; box-sizing: border-box; }
+    .modal-box textarea { resize: vertical; min-height: 72px; font-family: inherit; }
+    .modal-foot { text-align: right; margin-top: 18px; }
+    .modal-foot button { margin-left: 8px; }
+
+    /* 分页栏（后台订单 + 我的订单共用） */
+    .pager-bar { display: none; justify-content: space-between; align-items: center;
+        gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 10px 6px;
+        font-size: 13px; color: #636e72; }
+    .pager-info { font-weight: 600; color: #2d3436; }
+    .pager-sizes button, .pager-pages button {
+        margin: 0 2px; padding: 4px 10px; border: 1px solid #dfe6e9; background: #fff;
+        border-radius: 6px; cursor: pointer; font-size: 13px; color: #636e72; }
+    .pager-sizes button.active, .pager-pages button.active {
+        background: #0984e3; border-color: #0984e3; color: #fff; font-weight: 700; }
+    .pager-pages button.disabled { opacity: .45; cursor: not-allowed; }
+    .pager-pages button:not(.active):not(:disabled):hover { border-color: #0984e3; color: #0984e3; }
+    .pager-dots { margin: 0 4px; color: #b2bec3; }
+
+    /* ===== 📊 数据分析看板（一期）专用样式（无 CDN/图表库，纯 CSS+内联 SVG） ===== */
+    .db-day-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+    .db-day-bar .db-range-label { font-size: 12px; color: #b2bec3; }
+    .db-card-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 18px; }
+    .db-stat-card { background: #fff; border-radius: 10px; padding: 14px 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06); min-width: 0; }
+    .db-stat-card .db-label { font-size: 12.5px; color: #636e72; margin-bottom: 8px; }
+    .db-stat-card .db-value { font-size: 21px; font-weight: 700; color: #2d3436;
+        line-height: 1.2; word-break: break-all; }
+    .db-stat-card .db-value.db-money { color: #ff4757; }
+    .db-stat-card .db-sub { margin-top: 7px; font-size: 12px; color: #b2bec3; line-height: 1.5;
+        min-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .db-change-up   { color: #00b894; font-weight: 700; }
+    .db-change-down { color: #ff4757; font-weight: 700; }
+    .db-change-flat { color: #b2bec3; font-weight: 600; }
+    .db-section { background: #fff; border-radius: 10px; padding: 16px 18px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 16px; }
+    .db-section h3 { margin: 0 0 12px; font-size: 15px; color: #2d3436; }
+    .db-section h3 .db-tag { font-size: 12px; color: #b2bec3; font-weight: 400; margin-left: 8px; }
+    .db-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .db-empty { color: #b2bec3; font-size: 13px; text-align: center; padding: 18px 0; }
+    /* 趋势 SVG 折线图（纯内联 SVG，悬浮 title） */
+    .db-trend-svg { width: 100%; height: 220px; display: block; }
+    .db-trend-svg polyline { fill: none; stroke: #0984e3; stroke-width: 2.5; }
+    .db-trend-svg .db-grid { stroke: #f1f2f6; stroke-width: 1; }
+    .db-trend-svg .db-axis { font-size: 10px; fill: #b2bec3; }
+    .db-trend-svg circle { fill: #0984e3; }
+    /* TOP5 横向条形（宽度按最大值归一化） */
+    .db-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+    .db-bar-name { width: 130px; flex: none; color: #2d3436; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis; }
+    .db-bar-track { flex: 1; background: #f5f6fa; border-radius: 6px; height: 22px;
+        overflow: hidden; min-width: 60px; }
+    .db-bar-fill { height: 100%; background: linear-gradient(90deg,#74b9ff,#0984e3);
+        border-radius: 6px; min-width: 2px; }
+    .db-bar-meta { width: 145px; flex: none; text-align: right; color: #636e72;
+        font-size: 12px; white-space: nowrap; }
+    .db-bar-meta b { color: #ff4757; }
+    /* 漏斗阶梯横条（宽度按注册数归一化） */
+    .db-funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+    .db-funnel-label { width: 104px; flex: none; color: #2d3436; white-space: nowrap; }
+    .db-funnel-track { flex: 1; background: #f5f6fa; border-radius: 6px; height: 24px;
+        min-width: 60px; overflow: hidden; }
+    .db-funnel-fill { height: 100%; background: linear-gradient(90deg,#a29bfe,#6c5ce7);
+        border-radius: 6px; display: flex; align-items: center; justify-content: flex-end;
+        min-width: 2px; }
+    .db-funnel-fill span { color: #fff; font-size: 11px; font-weight: 700; padding-right: 8px;
+        white-space: nowrap; }
+    .db-funnel-rate { width: 130px; flex: none; text-align: right; font-size: 12px; color: #636e72;
+        white-space: nowrap; }
+    /* AI 经营简报卡片 */
+    .db-brief-title { font-size: 16px; font-weight: 700; color: #2d3436; margin: 0 0 12px; }
+    .db-brief-p { font-size: 14px; line-height: 1.9; color: #2d3436; margin: 0 0 8px; }
+    .db-alert { border-radius: 8px; padding: 9px 14px; font-size: 13px; margin-top: 8px;
+        line-height: 1.6; }
+    .db-alert-good { background: #e9fbf3; border: 1px solid #7bed9f; color: #067c4e; }
+    .db-alert-warn { background: #fff5f5; border: 1px solid #ffa5b0; color: #c0392b; }
+    .db-alert-info { background: #f4f6f8; border: 1px solid #dfe6e9; color: #636e72; }
+    /* AI 初审面板：CSS 进度条 + 三个建议小数字 */
+    .db-ai-topline { display: flex; gap: 26px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; color: #636e72; }
+    .db-ai-topline b { color: #2d3436; font-size: 16px; }
+    .db-progress { background: #f1f2f6; border-radius: 20px; height: 18px; overflow: hidden;
+        margin: 6px 0 14px; }
+    .db-progress-fill { height: 100%; background: linear-gradient(90deg,#55efc4,#00b894);
+        border-radius: 20px; min-width: 2px; }
+    .db-progress-text { font-size: 13px; color: #636e72; }
+    .db-sugg-nums { display: flex; gap: 12px; }
+    .db-sugg-num { flex: 1; text-align: center; border-radius: 8px; padding: 10px 6px;
+        background: #f8f9fb; font-size: 12px; color: #636e72; }
+    .db-sugg-num b { display: block; font-size: 19px; margin-top: 4px; }
+    .db-sugg-num.s-approve b { color: #00b894; }
+    .db-sugg-num.s-reject b { color: #ff4757; }
+    .db-sugg-num.s-manual b { color: #b2bec3; }
+
+    /* ===== 📊 数据分析看板（二期：深度洞察）专用样式（无 CDN，纯 CSS） ===== */
+    .p2-title { font-size: 14px; font-weight: 700; color: #2d3436; margin: 22px 0 12px;
+        padding-top: 14px; border-top: 2px dashed #dfe6e9; display: flex; align-items: center; gap: 8px; }
+    .p2-title .p2-sub { font-size: 12px; font-weight: 400; color: #b2bec3; }
+    .p2-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    /* 评价标签：正负标签横条（宽度按各侧最高频次归一化） */
+    .p2-tag-head { display: flex; justify-content: space-between; font-size: 12.5px;
+        color: #636e72; margin-bottom: 10px; }
+    .p2-tag-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 8px; }
+    .p2-tag-name { width: 92px; flex: none; white-space: nowrap; color: #2d3436; }
+    .p2-tag-track { flex: 1; background: #f5f6fa; border-radius: 6px; height: 20px; min-width: 50px; overflow: hidden; }
+    .p2-tag-fill { height: 100%; border-radius: 6px; min-width: 2px; }
+    .p2-tag-fill.pos { background: linear-gradient(90deg,#55efc4,#00b894); }
+    .p2-tag-fill.neg { background: linear-gradient(90deg,#ff7675,#ff4757); }
+    .p2-tag-num { width: 40px; flex: none; text-align: right; font-size: 12px; color: #636e72; }
+    /* 差评预警列表（红底） */
+    .p2-bad-list { margin-top: 6px; }
+    .p2-bad-item { background: #fff5f5; border: 1px solid #ffa5b0; border-radius: 8px;
+        padding: 8px 12px; margin-bottom: 8px; font-size: 13px; }
+    .p2-bad-top { display: flex; justify-content: space-between; color: #c0392b;
+        font-weight: 700; margin-bottom: 4px; }
+    .p2-bad-body { color: #2d3436; line-height: 1.55; word-break: break-all; }
+    .p2-bad-time { font-size: 11px; font-weight: 400; color: #b2bec3; }
+    /* 库存预警 */
+    .p2-inv-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .p2-inv-bar input { width: 90px; padding: 7px 10px; border: 1px solid #dfe6e9;
+        border-radius: 6px; font-size: 13px; }
+    .p2-inv-bar .p2-hint { font-size: 12px; color: #b2bec3; }
+    .p2-stock-0 { color: #ff4757; font-weight: 700; }
+    .p2-stock-low { color: #e67e22; font-weight: 700; }
+    .p2-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+    .p2-badge.b0 { background: #ffeef0; color: #ff4757; }
+    .p2-badge.bl { background: #fff4e6; color: #e67e22; }
+    /* RFM 分层 */
+    .p2-rfm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .p2-rfm-card { background: #fff; border: 1px solid #dfe6e9; border-radius: 10px;
+        padding: 12px 14px; min-width: 0; }
+    .p2-rfm-card.p2-rfm-zero { opacity: .55; }
+    .p2-rfm-head { display: flex; justify-content: space-between; align-items: baseline;
+        font-size: 13.5px; font-weight: 700; color: #2d3436; margin-bottom: 6px; }
+    .p2-rfm-head .p2-rfm-code { font-size: 11px; color: #b2bec3; font-weight: 400; }
+    .p2-rfm-count { font-size: 12px; color: #636e72; margin-bottom: 8px; }
+    .p2-rfm-count b { font-size: 18px; color: #0984e3; }
+    .p2-rfm-toggle { font-size: 12px; color: #0984e3; cursor: pointer; }
+    .p2-rfm-users { display: none; margin-top: 8px; max-height: 230px; overflow: auto; }
+    .p2-rfm-users table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .p2-rfm-users th, .p2-rfm-users td { border-bottom: 1px solid #f1f2f6; padding: 4px 6px;
+        text-align: left; white-space: nowrap; }
+    .p2-rfm-users th { color: #b2bec3; font-weight: 400; }
+    .p2-rfm-median { font-size: 12px; color: #636e72; margin: 4px 0 12px; line-height: 1.7; }
+
+    /* 客户端分页器（差评预警 / RFM 用户明细等全量在前端的数据） */
+    .cp-bar { display: flex; justify-content: center; align-items: center; gap: 10px;
+        margin-top: 10px; }
+    .cp-btn { padding: 4px 12px; border: 1px solid #dfe6e9; background: #fff;
+        border-radius: 6px; cursor: pointer; font-size: 12px; color: #636e72; }
+    .cp-btn:hover:not(:disabled) { border-color: #0984e3; color: #0984e3; }
+    .cp-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .cp-info { font-size: 12px; font-weight: 600; color: #2d3436; min-width: 42px;
+        text-align: center; }
+    .cp-count { margin-top: 6px; font-size: 11px; color: #b2bec3; text-align: right; }
+    .p2-rfm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .p2-rfm-table th, .p2-rfm-table td { border-bottom: 1px solid #f1f2f6;
+        padding: 4px 6px; text-align: left; }
+    .p2-rfm-table th { color: #b2bec3; font-weight: 400; }
+    @media (max-width: 1100px) { .p2-rfm-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 900px) {
+        .p2-cols { grid-template-columns: 1fr; }
+        .p2-rfm-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 1100px) { .db-card-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 900px) {
+        .add-form { grid-template-columns: 1fr 1fr; }
+        .db-cols { grid-template-columns: 1fr; }
+        .db-card-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+
+<div class="admin-wrap">
+    <h1 class="page-title">🛠️ 后台管理</h1>
+    <div class="admin-tip" id="admin-tip" style="display:none">
+        管理员账号：<b>admin</b> / 密码：<b>admin123</b>（在右上角登录后即可管理）
+    </div>
+
+    <div class="admin-tabs">
+        <button class="admin-tab" onclick="switchTab('dashboard', this)">📊 数据分析</button>
+        <button class="admin-tab active" onclick="switchTab('orders', this)">📦 订单管理</button>
+        <button class="admin-tab" onclick="switchTab('aftersales', this)">🎫 售后审核</button>
+        <button class="admin-tab" onclick="switchTab('reviews', this)">💬 评价管理</button>
+        <button class="admin-tab" onclick="switchTab('products', this)">🏷️ 商品管理</button>
+    </div>
+
+    <!-- ===== 📊 数据分析看板（一期；首次切到才懒加载，无任何外部图表库） ===== -->
+    <div class="admin-panel" id="panel-dashboard">
+        <div class="db-day-bar">
+            <button class="filter-btn active" data-days="7" onclick="switchDashboardDays(7, this)">近 7 天</button>
+            <button class="filter-btn" data-days="30" onclick="switchDashboardDays(30, this)">近 30 天</button>
+            <span class="db-range-label">指标卡 / 趋势 / TOP 榜 / 简报随周期切换；转化漏斗、AI 初审面板为全量数据</span>
+        </div>
+        <div id="db-auth-tip" class="admin-tip" style="display:none;margin-bottom:14px"></div>
+        <!-- 1. 六个核心指标卡 -->
+        <div class="db-card-grid" id="db-cards">
+            <div class="db-empty">加载中...</div>
+        </div>
+        <!-- 2. 销售趋势（内联 SVG 折线） -->
+        <div class="db-section">
+            <h3>销售趋势 <span class="db-tag">GMV / 天（悬浮看明细）</span></h3>
+            <div id="db-trend"><div class="db-empty">加载中...</div></div>
+        </div>
+        <!-- 3. TOP5 + 4. 漏斗 双栏 -->
+        <div class="db-cols">
+            <div class="db-section" style="margin-bottom:0">
+                <h3>热销商品 TOP5 <span class="db-tag" id="db-top-tag">近 7 天</span></h3>
+                <div id="db-top"><div class="db-empty">加载中...</div></div>
+            </div>
+            <div class="db-section" style="margin-bottom:0">
+                <h3>用户转化漏斗 <span class="db-tag">全量 · 按去重用户数</span></h3>
+                <div id="db-funnel"><div class="db-empty">加载中...</div></div>
+            </div>
+        </div>
+        <!-- 5. AI 经营简报 -->
+        <div class="db-section">
+            <h3>🤖 AI 经营简报 <span class="db-tag" id="db-brief-tag">近 7 天 · 模板生成（离线可用）</span></h3>
+            <div id="db-briefing"><div class="db-empty">加载中...</div></div>
+        </div>
+        <!-- 6. AI 售后初审效果（全量） -->
+        <div class="db-section">
+            <h3>AI 售后初审效果 <span class="db-tag">全量 · 人在回路</span></h3>
+            <div id="db-aipanel"><div class="db-empty">加载中...</div></div>
+        </div>
+
+        <!-- ===== 二期：深度洞察（懒加载；各模块独立失败占位，不影响一期） ===== -->
+        <div class="p2-title">🧭 二期：深度洞察
+            <span class="p2-sub">评价标签洞察 / 库存预警 / 用户 RFM 分层（Python 端聚合，MySQL/SQLite 一致）</span>
+        </div>
+        <!-- 1. 评价标签洞察：周期跟随顶部 7/30；正负标签横条 + 差评预警（红底） -->
+        <div class="p2-cols">
+            <div class="db-section" style="margin-bottom:0">
+                <h3>评价标签洞察 <span class="db-tag" id="p2-review-tag">近 7 天 · 离线规则引擎</span></h3>
+                <div id="p2-review"><div class="db-empty">加载中...</div></div>
+            </div>
+            <div class="db-section" style="margin-bottom:0">
+                <h3>差评预警 <span class="db-tag">评分 ≤ 2 · 需跟进</span></h3>
+                <div id="p2-badreviews"><div class="db-empty">加载中...</div></div>
+            </div>
+        </div>
+        <!-- 2. 库存预警：阈值输入 + 查询；缺货红 / 低货橙 -->
+        <div class="db-section">
+            <h3>库存预警 <span class="db-tag">仅在售商品 · 库存升序</span></h3>
+            <div class="p2-inv-bar">
+                <span style="font-size:13px;color:#636e72">库存阈值</span>
+                <input id="p2-inv-threshold" type="number" min="1" max="100" value="10"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();loadInventoryAlerts();}">
+                <button class="admin-btn" onclick="loadInventoryAlerts()">查询</button>
+                <span class="p2-hint">范围 1-100；stock = 0 记为缺货，1 ≤ stock ≤ 阈值记为低货</span>
+            </div>
+            <div id="p2-inventory"><div class="db-empty">点击「查询」加载（首次切入自动加载）</div></div>
+        </div>
+        <!-- 3. 用户 RFM 分层：7/30/90；8 层卡片可展开用户明细 -->
+        <div class="db-section">
+            <h3>用户 RFM 分层 <span class="db-tag">仅窗口内有效订单（paid/shipped/completed）</span></h3>
+            <div class="db-day-bar" style="margin-bottom:10px">
+                <button class="filter-btn" data-rfmdays="7" onclick="switchRfmDays(7, this)">近 7 天</button>
+                <button class="filter-btn active" data-rfmdays="30" onclick="switchRfmDays(30, this)">近 30 天</button>
+                <button class="filter-btn" data-rfmdays="90" onclick="switchRfmDays(90, this)">近 90 天</button>
+            </div>
+            <div class="p2-rfm-median" id="p2-rfm-median">打分口径：各维度与全体中位数比较——R(最近购买距今天数) ≤ 中位数记 2，F(订单数)/M(消费额) ≥ 中位数记 2；按 RFM 分值映射 8 类经典分层。</div>
+            <div id="p2-rfm"><div class="db-empty">加载中...</div></div>
+        </div>
+    </div>
+
+    <!-- ===== 订单管理 ===== -->
+    <div class="admin-panel active" id="panel-orders">
+        <!-- 注意：搜索条不能放进 #status-filter 里，renderFilterBar 会整体重绘 -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+            <div class="filter-bar" id="status-filter" style="margin-bottom:0"></div>
+            <form class="search-bar" onsubmit="searchAdminOrders();return false;">
+                <input class="search-input" id="admin-order-keyword" type="text"
+                       placeholder="搜索订单号或商品名"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();searchAdminOrders();}">
+                <button type="submit" class="admin-btn">搜索</button>
+            </form>
+        </div>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>订单号</th><th>顾客</th><th>商品</th><th>金额</th>
+                    <th>状态</th><th>支付渠道</th><th width="175">收货 / 物流</th><th>下单时间</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="admin-order-body">
+                <tr><td colspan="9" style="text-align:center;color:#b2bec3">加载中...</td></tr>
+            </tbody>
+        </table>
+        <div class="pager-bar" id="admin-order-pager"></div>
+    </div>
+
+    <!-- ===== 售后审核 ===== -->
+    <div class="admin-panel" id="panel-aftersales">
+        <!-- 注意：搜索条不能放进 #aftersale-filter 里，renderAftersaleFilterBar 会整体重绘 -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+            <div class="filter-bar" id="aftersale-filter" style="margin-bottom:0"></div>
+            <form class="search-bar" onsubmit="searchAdminAftersales();return false;">
+                <input class="search-input" id="admin-aftersale-keyword" type="text"
+                       placeholder="搜索订单号 / 用户名 / 申请原因"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();searchAdminAftersales();}">
+                <button type="submit" class="admin-btn">搜索</button>
+            </form>
+        </div>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>订单号 / 金额</th><th>用户</th><th>类型</th><th width="280">原因 / 备注</th>
+                    <th>申请时间</th><th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="admin-aftersale-body">
+                <tr><td colspan="7" style="text-align:center;color:#b2bec3">加载中...</td></tr>
+            </tbody>
+        </table>
+        <div class="pager-bar" id="admin-aftersale-pager"></div>
+    </div>
+
+    <!-- ===== 评价管理 ===== -->
+    <div class="admin-panel" id="panel-reviews">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+            <div class="filter-bar" id="review-filter" style="margin-bottom:0">
+                <button class="filter-btn active" data-status="all" onclick="filterReviews('all', this)">全部评价</button>
+                <button class="filter-btn" data-status="deleted" onclick="filterReviews('deleted', this)">已删除</button>
+            </div>
+            <form class="search-bar" onsubmit="searchAdminReviews();return false;">
+                <input class="search-input" id="admin-review-keyword" type="text"
+                       placeholder="搜索评价内容 / 用户名 / 订单号"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();searchAdminReviews();}">
+                <button type="submit" class="admin-btn">搜索</button>
+            </form>
+        </div>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>订单号</th><th>用户</th><th>评分</th><th width="320">评价内容</th>
+                    <th>评价时间</th><th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="admin-review-body">
+                <tr><td colspan="7" style="text-align:center;color:#b2bec3">加载中...</td></tr>
+            </tbody>
+        </table>
+        <div class="pager-bar" id="admin-review-pager"></div>
+    </div>
+
+    <!-- ===== 商品管理 ===== -->
+    <div class="admin-panel" id="panel-products">
+        <form class="filter-bar" onsubmit="searchAdminProducts();return false;" style="margin-left:auto;justify-content:flex-end">
+            <input class="search-input" id="admin-product-keyword" type="text"
+                   placeholder="搜索商品名"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();searchAdminProducts();}">
+            <button type="submit" class="admin-btn">搜索</button>
+        </form>
+        <div class="add-form">
+            <input id="p-name" placeholder="商品名称">
+            <input id="p-price" placeholder="价格" type="number" step="0.01">
+            <input id="p-stock" placeholder="库存" type="number">
+            <input id="p-desc" placeholder="商品描述">
+            <input id="p-image" placeholder="图片文件名，多张用英文逗号分隔，留空用默认图">
+            <button class="admin-btn green" onclick="addProduct()">+ 添加商品</button>
+        </div>
+        <div class="image-hint">
+            💡 图片用法：把图片文件放到项目的 <b>app/static/images/</b> 目录，这里只填文件名（如 keyboard.png）；
+            多张图片用英文逗号分隔（如 <b>keyboard1.png,keyboard2.png</b>），商品详情页会轮播展示；
+            留空则自动显示统一占位图 default.svg，不会裂图。
+        </div>
+        <table class="admin-table">
+            <thead>
+                <tr><th>ID</th><th>图片</th><th>商品名</th><th>价格</th><th>库存</th><th>描述 / 图片文件名</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody id="admin-product-body">
+                <tr><td colspan="8" style="text-align:center;color:#b2bec3">加载中...</td></tr>
+            </tbody>
+        </table>
+        <div class="pager-bar" id="admin-product-pager"></div>
+    </div>
+</div>
+
+<!-- 发货弹窗：填写物流公司 + 运单号 -->
+<div class="modal-mask" id="ship-modal">
+    <div class="modal-box">
+        <h3>订单发货</h3>
+        <div class="form-group">
+            <label>物流公司 <span style="color:#ff4757">*</span></label>
+            <select id="ship-company">
+                <option value="">请选择物流公司</option>
+                <option value="顺丰速运">顺丰速运</option>
+                <option value="中通快递">中通快递</option>
+                <option value="圆通速递">圆通速递</option>
+                <option value="韵达快递">韵达快递</option>
+                <option value="京东物流">京东物流</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>运单号 <span style="color:#ff4757">*</span></label>
+            <input id="ship-trackno" placeholder="请输入快递运单号">
+        </div>
+        <div class="modal-foot">
+            <button class="admin-btn gray" onclick="closeShipModal()">取消</button>
+            <button class="admin-btn green" onclick="confirmShip()">确认发货</button>
+        </div>
+    </div>
+</div>
+
+<!-- 拒绝售后弹窗：可填写管理员备注（可留空） -->
+<div class="modal-mask" id="reject-modal">
+    <div class="modal-box">
+        <h3>拒绝售后申请</h3>
+        <div class="form-group">
+            <label>拒绝备注（选填，顾客可见）</label>
+            <textarea id="reject-note" placeholder="例如：超过售后时效 / 商品不参与价保活动"></textarea>
+        </div>
+        <div class="modal-foot">
+            <button class="admin-btn gray" onclick="closeRejectModal()">取消</button>
+            <button class="admin-btn red" onclick="confirmRejectAftersale()">确认拒绝</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

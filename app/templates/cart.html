@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}购物车 - 极客商城{% endblock %}
+
+{% block content %}
+<style>
+    /* 结算区收货地址选择（只在购物车页生效） */
+    .cart-addr-section { background:#fff; border-radius:12px; padding:16px 18px; margin-bottom:16px;
+        box-shadow:0 2px 10px rgba(0,0,0,.06); }
+    .cart-addr-title { font-size:15px; font-weight:700; color:#2d3436; margin-bottom:10px; }
+    .cart-addr-list { display:flex; flex-direction:column; gap:10px; }
+    .cart-addr-card { border:2px solid #eef0f3; border-radius:10px; padding:12px 14px; cursor:pointer;
+        display:flex; align-items:center; gap:10px; transition:border-color .15s; }
+    .cart-addr-card:hover { border-color:#b2d8f5; }
+    .cart-addr-card.selected { border-color:#0984e3; background:#f7fbff; }
+    .cart-addr-radio { width:16px; height:16px; border-radius:50%; border:2px solid #b2bec3; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; }
+    .cart-addr-card.selected .cart-addr-radio { border-color:#0984e3; }
+    .cart-addr-card.selected .cart-addr-radio::after { content:""; width:8px; height:8px; border-radius:50%;
+        background:#0984e3; }
+    .cart-addr-text { font-size:14px; color:#2d3436; line-height:1.7; }
+    .cart-addr-text .cart-addr-name { font-weight:700; margin-right:8px; }
+    .cart-addr-tag { display:inline-block; background:#0984e3; color:#fff; font-size:11px;
+        padding:0 7px; border-radius:9px; margin-left:6px; vertical-align:middle; }
+    .cart-addr-empty { font-size:14px; color:#636e72; padding:6px 2px; }
+    /* 购物车内搜索：纯前端视觉筛选 */
+    .cart-search { background:#fff; border-radius:12px; padding:12px 16px; margin-bottom:12px;
+        box-shadow:0 2px 10px rgba(0,0,0,.06); display:flex; }
+    .cart-search input {
+        width: 280px; max-width: 80vw; padding: 9px 14px; border: 1px solid #dfe6e9;
+        border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+    .cart-search input:focus { outline: none; border-color: #0984e3; }
+    .cart-empty-match { background:#fff; border-radius:12px; padding:24px; text-align:center;
+        color:#636e72; font-size:14px; box-shadow:0 2px 10px rgba(0,0,0,.06); margin-bottom:12px; }
+    /* 勾选结算：条目复选框 + 表头全选条（覆盖全局 .cart-item 栅格，前面加一列勾选框） */
+    .cart-check { width:18px; height:18px; cursor:pointer; accent-color:#0984e3; flex-shrink:0; }
+    .cart-item { grid-template-columns: 24px 80px 1fr auto auto auto; gap:14px; }
+    .cart-select-bar { background:#fff; border-radius:12px 12px 0 0; padding:12px 20px;
+        display:flex; align-items:center; gap:8px; font-size:14px; color:#2d3436; font-weight:600;
+        border-bottom:1px solid #f0f0f6; margin-bottom:-12px; }
+    .cart-list { border-radius:0 0 12px 12px; }
+    .cart-selected-info { font-size:14px; color:#636e72; margin-right:auto; }
+    .cart-selected-info b { color:#ff4757; font-size:16px; }
+    @media (max-width: 900px) {
+        .cart-item { grid-template-columns: 24px 60px 1fr auto; }
+        .qty-control, .cart-item-subtotal { display:none; }
+    }
+</style>
+<h1 class="page-title">我的购物车</h1>
+
+<div id="cart-empty" class="empty-state" style="display:none">
+    <div class="empty-icon">🛒</div>
+    <p>购物车空空如也</p>
+    <button class="btn-primary" onclick="location.href='/'">去逛逛</button>
+</div>
+
+<div id="cart-content" style="display:none">
+    <!-- 收货地址选择（下单必选） -->
+    <div class="cart-addr-section">
+        <div class="cart-addr-title">收货地址</div>
+        <div id="cart-addr-list" class="cart-addr-list"></div>
+        <div id="cart-addr-empty" class="cart-addr-empty" style="display:none">
+            还没有收货地址，<a href="/addresses" style="color:#0984e3;font-weight:700">请先添加收货地址</a>
+        </div>
+    </div>
+    <!-- 购物车搜索：纯前端即时筛选，只影响显示，不清空已勾选；全选只作用于过滤后的可见条目 -->
+    <div class="cart-search">
+        <input id="cart-keyword" type="text" placeholder="搜索购物车内的商品名"
+               oninput="filterCartItems()">
+    </div>
+    <!-- 全选条：全选只作用于【当前可见条目】（搜索过滤后只勾选过滤结果） -->
+    <div class="cart-select-bar" id="cart-select-bar">
+        <input type="checkbox" id="cart-check-all" class="cart-check"
+               onchange="toggleSelectAll(this.checked)" title="全选当前商品">
+        <label for="cart-check-all" style="cursor:pointer">全选</label>
+    </div>
+    <div class="cart-list" id="cart-list"></div>
+    <div class="cart-empty-match" id="cart-empty-match" style="display:none">
+        🔍 没有匹配的商品
+    </div>
+    <div class="cart-summary">
+        <div class="cart-selected-info">
+            已选 <b id="cart-selected-count">0</b> 件
+        </div>
+        <div class="cart-total">
+            <span>合计（仅勾选商品）：</span>
+            <span class="total-price" id="cart-total">¥0.00</span>
+        </div>
+        <button class="btn-primary btn-large" onclick="checkout()">去结算</button>
+    </div>
+</div>
+
+<div id="cart-login-tip" class="empty-state" style="display:none">
+    <p>请先登录后查看购物车</p>
+    <button class="btn-primary" onclick="location.href='/login'">去登录</button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+{% endblock %}

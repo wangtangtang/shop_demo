@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}收银台 - 极客商城{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card" id="pay-card">
+        <!-- 由 checkout.js 渲染：选择支付方式 / 扫码支付中 / 支付成功 -->
+        <div id="pay-content" style="text-align:center">
+            <p style="color:#636e72">正在加载订单信息…</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
+{% endblock %}

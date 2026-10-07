@@ -1,0 +1,5 @@
+flask==3.0.3
+flask-sqlalchemy==3.1.1
+requests==2.32.3
+pytest==8.3.2
+allure-pytest==2.13.5

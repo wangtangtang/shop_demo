@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}收货地址 - 极客商城{% endblock %}
+
+{% block content %}
+<style>
+    /* ===== 收货地址簿页专用样式（只在这个页面生效） ===== */
+    .addr-wrap { max-width: 860px; margin: 0 auto; }
+    .addr-form {
+        background: #fff; border-radius: 12px; padding: 20px 22px; margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    }
+    .addr-form h3 { margin: 0 0 14px; font-size: 16px; color: #2d3436; }
+    .addr-form .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .addr-form input {
+        padding: 10px 12px; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 14px;
+        box-sizing: border-box;
+    }
+    .addr-form input.flex1 { flex: 1; min-width: 160px; }
+    .addr-form input.full { width: 100%; }
+    .addr-form .form-actions { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+    .addr-check { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #636e72; cursor: pointer; }
+    .addr-list { display: flex; flex-direction: column; gap: 12px; }
+    .addr-card {
+        background: #fff; border: 2px solid #eef0f3; border-radius: 12px; padding: 16px 18px;
+        display: flex; justify-content: space-between; align-items: flex-start; gap: 14px;
+    }
+    .addr-card.default { border-color: #0984e3; background: #f7fbff; }
+    .addr-info { line-height: 1.9; font-size: 14px; color: #2d3436; }
+    .addr-info .addr-name { font-size: 16px; font-weight: 700; margin-right: 10px; }
+    .addr-info .addr-region { color: #636e72; }
+    .addr-tag {
+        display: inline-block; background: #0984e3; color: #fff; font-size: 12px;
+        padding: 1px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle;
+    }
+    .addr-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .addr-link-btn {
+        border: 1px solid #dfe6e9; background: #fff; color: #636e72; border-radius: 6px;
+        padding: 5px 12px; font-size: 13px; cursor: pointer;
+    }
+    .addr-link-btn:hover { border-color: #0984e3; color: #0984e3; }
+    .addr-link-btn.red:hover { border-color: #ff4757; color: #ff4757; }
+    .addr-link-btn.primary { border-color: #0984e3; color: #0984e3; }
+</style>
+
+<div class="addr-wrap">
+    <h1 class="page-title">收货地址</h1>
+
+    <!-- 新增 / 编辑地址表单 -->
+    <div class="addr-form">
+        <h3 id="addr-form-title">➕ 新增收货地址</h3>
+        <div class="form-row">
+            <input class="flex1" id="a-name" placeholder="收货人姓名">
+            <input class="flex1" id="a-phone" placeholder="手机号（11位大陆手机号）" maxlength="11">
+        </div>
+        <div class="form-row">
+            <input class="full" id="a-region" placeholder="所在地区，如：北京市海淀区">
+        </div>
+        <div class="form-row">
+            <input class="full" id="a-detail" placeholder="详细地址，如：中关村大街1号">
+        </div>
+        <div class="form-actions">
+            <label class="addr-check">
+                <input type="checkbox" id="a-default"> 设为默认地址
+            </label>
+            <button class="btn-primary" id="addr-save-btn" onclick="saveAddress()">保存地址</button>
+            <button class="btn-secondary" id="addr-cancel-btn" onclick="resetForm()" style="display:none">取消编辑</button>
+        </div>
+    </div>
+
+    <!-- 地址卡片列表 -->
+    <div class="addr-list" id="addr-list">
+        <div class="loading">加载中...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/addresses.js') }}"></script>
+{% endblock %}

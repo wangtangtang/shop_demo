@@ -1,0 +1,30 @@
+# ===== 敏感配置：真实 config.py 不提交，只提交 config.example.py =====
+config.py
+
+# ===== Python 缓存 =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ===== 虚拟环境 =====
+venv/
+env/
+.venv/
+
+# ===== 本地数据库文件（SQLite 文件不入库，需要时由 create_all 自动生成） =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Allure 测试报告与临时产物 =====
+allure-results/
+allure-report/
+htmlcov/
+.coverage
+
+# ===== IDE / 系统文件/系统/编辑器 =====
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

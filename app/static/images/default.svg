@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+  <rect width="300" height="300" fill="#f6f7f9"/>
+  <!-- 包裹箱：浅灰填充，斜切箱盖，居中偏上 -->
+  <path d="M126 108 L174 108 L195 128 L195 180 L105 180 L105 128 Z" fill="#d9dde4"/>
+  <!-- 箱盖中缝（与背景同色，做出左右对开的纸箱感） -->
+  <line x1="150" y1="108" x2="150" y2="180" stroke="#f6f7f9" stroke-width="4"/>
+  <text x="150" y="226" font-size="26" text-anchor="middle" fill="#c3c8d0" font-family="sans-serif">暂无图片</text>
+</svg>

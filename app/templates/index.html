@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}极客商城 - 首页{% endblock %}
+
+{% block content %}
+<style>
+    /* 分页栏（与「我的订单 / 后台」共用 renderPager，这里补页面样式） */
+    .pager-bar { display: none; justify-content: space-between; align-items: center;
+        gap: 12px; flex-wrap: wrap; margin: 4px 0 30px; padding: 10px 4px;
+        font-size: 13px; color: #636e72; }
+    .pager-info { font-weight: 600; color: #2d3436; }
+    .pager-sizes button, .pager-pages button {
+        margin: 0 2px; padding: 4px 10px; border: 1px solid #dfe6e9; background: #fff;
+        border-radius: 6px; cursor: pointer; font-size: 13px; color: #636e72; }
+    .pager-sizes button.active, .pager-pages button.active {
+        background: #0984e3; border-color: #0984e3; color: #fff; font-weight: 700; }
+    .pager-pages button.disabled { opacity: .45; cursor: not-allowed; }
+    .pager-pages button:not(.active):not(:disabled):hover { border-color: #0984e3; color: #0984e3; }
+    .pager-dots { margin: 0 4px; color: #b2bec3; }
+</style>
+
+<section class="banner">
+    <div class="banner-text">
+        <h1>极客装备 · 一站购齐</h1>
+        <p>键盘 / 鼠标 / 显示器 / 扩展坞 / 耳机</p>
+    </div>
+</section>
+
+<section class="toolbar">
+    <div class="search-box">
+        <input type="text" id="search-input" placeholder="搜索商品，比如 键盘">
+        <button onclick="searchProducts()">搜索</button>
+    </div>
+</section>
+
+<!-- AI 猜你喜欢（登录后按购物车/订单个性化推荐） -->
+<section id="recommend-section" style="margin-bottom: 30px;">
+    <h2 id="recommend-title" style="font-size:20px;margin:0 0 14px;color:#2d3436;">✨ 猜你喜欢</h2>
+    <div class="product-grid" id="recommend-grid">
+        <div class="loading">推荐加载中...</div>
+    </div>
+</section>
+
+<h2 style="font-size:20px;margin:0 0 14px;color:#2d3436;">全部商品</h2>
+<section class="product-grid" id="product-grid">
+    <div class="loading">加载中...</div>
+</section>
+<!-- 商品列表分页栏（共N条/M页、每页条数切换、页码窗口，由 shop.js 渲染） -->
+<div class="pager-bar" id="product-pager"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/shop.js') }}"></script>
+{% endblock %}
