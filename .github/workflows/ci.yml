@@ -26,6 +26,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # config.py 被 .gitignore 忽略、不在仓库里；CI 用模板复制一份（默认 SQLite）
+      - name: 准备配置文件
+        run: cp config.example.py config.py
+
       - name: 运行 P0 冒烟测试
         run: |
           pytest test_api/test_smoke_ci.py -v
