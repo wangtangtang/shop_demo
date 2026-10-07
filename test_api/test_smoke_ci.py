@@ -49,7 +49,10 @@ def client():
             db.session.add(Product(name="冒烟测试键盘", price=199.0, stock=100))
             db.session.commit()
             yield app.test_client()
+            # 先结束会话、再释放连接池，确保下面能删掉临时文件
+            # （Windows 上文件仍被占用时删除会报 PermissionError）
             db.session.remove()
+            db.engine.dispose()
     finally:
         if os.path.exists(db_file):
             os.remove(db_file)
@@ -64,6 +67,18 @@ def _signup_login(client):
     assert r.status_code == 200, r.get_data(as_text=True)
     token = r.get_json()["data"]["token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+def _create_address(client, headers):
+    """新增一个收货地址，返回地址 id（下单必选）。"""
+    r = client.post("/api/addresses", headers=headers, json={
+        "receiver_name": "冒烟收货人",
+        "receiver_phone": "13800138000",
+        "region": "北京市海淀区",
+        "detail": "测试路1号",
+    })
+    assert r.status_code == 200, r.get_data(as_text=True)
+    return r.get_json()["data"]["id"]
 
 
 def test_health_products_list(client):
@@ -99,12 +114,14 @@ def test_cart_add_requires_login(client):
 def test_add_cart_and_create_order(client):
     """加购 → 下单主链路：返回订单号，购物车被清空"""
     headers = _signup_login(client)
+    address_id = _create_address(client, headers)
 
     add = client.post("/api/cart", headers=headers,
                       json={"product_id": 1, "quantity": 2})
     assert add.status_code == 200, add.get_data(as_text=True)
 
-    order = client.post("/api/orders", headers=headers)
+    order = client.post("/api/orders", headers=headers,
+                        json={"address_id": address_id})
     assert order.status_code == 200, order.get_data(as_text=True)
     data = order.get_json()["data"]
     assert data["order_id"] > 0
