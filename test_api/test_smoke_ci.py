@@ -2,18 +2,23 @@
 
 设计目的：在 CI 的干净环境里也能跑——
 - 不依赖 MySQL、不依赖手动启动 Flask 服务；
-- 用 Flask 自带测试客户端发请求，用内存 SQLite 建库，秒级跑完；
+- 用 Flask 自带测试客户端发请求，用临时 SQLite 文件建库，秒级跑完；
 - 覆盖最核心的"注册→登录→看商品→加购→下单"主链路，
   任何一环挂掉，CI 立即红灯，阻止问题代码合入。
 
 这是接手已有项目时最稳的第一步：先把 P0 冒烟自动化并接进流水线，
 再逐步扩模块，而不是一上来重写框架。
+
+注意：这里不调用 create_app()，而是手动构建一个只含 API 的精简 app，
+避免 create_app 内部已 db.init_app 一次、再重绑临时库时
+被新版 flask_sqlalchemy 判为"同一 app 重复注册"而报错。
 """
 import os
 import tempfile
 import pytest
+from flask import Flask
 
-from app import create_app, db
+from app import db
 
 
 @pytest.fixture()
@@ -23,15 +28,21 @@ def client():
     fd, db_file = tempfile.mkstemp(suffix=".db")
     os.close(fd)
     try:
-        app = create_app()
+        # 手动构建精简 app：db 只在这一个 app 上注册一次
+        app = Flask(__name__)
         app.config.update(
             TESTING=True,
             SQLALCHEMY_DATABASE_URI=f"sqlite:///{db_file}",
+            SQLALCHEMY_TRACK_MODIFICATIONS=False,
+            SECRET_KEY="smoke-test-secret",
         )
-        # 重新绑定引擎到临时库（create_app 时已按默认配置建过一次引擎）
         db.init_app(app)
+
+        # 只注册 API 蓝图（冒烟不涉及服务端渲染页面）
+        from app.routes import api_bp
+        app.register_blueprint(api_bp, url_prefix="/api")
+
         with app.app_context():
-            db.drop_all()
             db.create_all()
             # 冒烟只造一个商品，不依赖 seed 账号
             from app.models import Product
