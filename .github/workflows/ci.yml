@@ -1,7 +1,7 @@
-# CI（持续集成）流水线：每次 push / Pull Request 自动跑 P0 冒烟
+# CI（持续集成）流水线：每次 push / Pull Request 自动跑核心回归
 #
 # 作用：代码一提交，GitHub 就用一台干净的云端机器
-#       装依赖 → 跑冒烟测试；任何一条失败 → 页面显示红灯、阻止问题代码合入。
+#       装依赖 → 跑测试；任何一条失败 → 页面显示红灯、阻止问题代码合入。
 name: CI
 
 on:
@@ -30,6 +30,10 @@ jobs:
       - name: 准备配置文件
         run: cp config.example.py config.py
 
-      - name: 运行 P0 冒烟测试
+      # 核心回归：三个互不依赖外部服务的文件，各自用临时 SQLite 建库
+      #   test_smoke_ci.py            5 条 P0 主链路冒烟
+      #   test_register_validation.py 5 条 注册入参校验（同事 B 提交）
+      #   test_order_flow.py          6 条 订单主流程（原作者 A 提交）
+      - name: 运行核心回归测试
         run: |
-          pytest test_api/test_smoke_ci.py -v
+          pytest test_api/test_smoke_ci.py test_api/test_register_validation.py test_api/test_order_flow.py -v
