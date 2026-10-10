@@ -30,10 +30,7 @@ jobs:
       - name: 准备配置文件
         run: cp config.example.py config.py
 
-      # 核心回归：三个互不依赖外部服务的文件，各自用临时 SQLite 建库
-      #   test_smoke_ci.py            5 条 P0 主链路冒烟
-      #   test_register_validation.py 5 条 注册入参校验（同事 B 提交）
-      #   test_order_flow.py          6 条 订单主流程（原作者 A 提交）
+      # 核心回归：四个互不依赖外部服务的文件，各自用临时 SQLite 建库
       - name: 运行核心回归测试
         run: |
-          pytest test_api/test_smoke_ci.py test_api/test_register_validation.py test_api/test_order_flow.py -v
+          pytest test_api/test_smoke_ci.py test_api/test_register_validation.py test_api/test_order_flow.py test_api/test_product_search.py -v
