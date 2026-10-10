@@ -1,7 +1,7 @@
 """商品搜索 / 详情 边界测试（特性分支 feature/product-search-test）
 
 覆盖：
-- 按关键字搜索命中
+- 按关键字搜索命中（且返回商品名称确实匹配关键字）
 - 搜索无结果
 - 查询存在的商品详情
 - 查询不存在的商品详情（404）
@@ -48,11 +48,15 @@ def client():
 
 
 def test_search_keyword_hits(client):
-    """搜索存在的关键字「键盘」：能搜到商品"""
+    """搜索存在的关键字「键盘」：能搜到商品，且每条名称都包含「键盘」"""
     r = client.get("/api/products?keyword=键盘")
     assert r.status_code == 200
     data = r.get_json()["data"]
     assert len(data["items"]) >= 1
+    # 根据评审意见补强：校验返回商品名称确实匹配关键字，
+    # 防止搜索逻辑误返回其它商品时用例仍通过
+    names = [item["name"] for item in data["items"]]
+    assert all("键盘" in name for name in names)
 
 
 def test_search_no_result(client):
