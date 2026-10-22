@@ -133,6 +133,25 @@ def test_login_wrong_password(requests_session, base_url):
                               json={"username": username, "password": "wrongpass99"})
     assert r.status_code == 401
 
+@pytest.mark.parametrize("path,payload", [
+    ("/login", {"username": 123456, "password": "123456"}),       # 用户名传数字
+    ("/login", {"username": "abc", "password": 123456}),           # 密码传数字
+    ("/login", {"username": None, "password": "123456"}),          # 用户名为 null
+    ("/login", {"password": "123456"}),                            # 缺用户名
+    ("/login", {"username": "abc"}),                               # 缺密码
+    ("/login", {"username": ["a"], "password": "123456"}),         # 用户名传数组
+    ("/register", {"username": 123456, "password": "123456"}),    # 注册：用户名传数字
+    ("/register", {"username": "abc", "password": None}),          # 注册：密码为 null
+])
+def test_auth_illegal_input_returns_400_not_500(requests_session, base_url, path, payload):
+    """回归：认证接口非法入参必须在入口被拦截返回 400，绝不能 500。
+
+    背景：修复前后端直接 data.get('username','').strip()，前端传数字/null 时
+    int/NoneType 没有 strip()，抛 AttributeError -> 500。
+    本用例锁定该缺陷，防止入口校验被删后 500 复发。"""
+    r = requests_session.post(f"{base_url}{path}", json=payload)
+    assert r.status_code == 400, f"非法入参应返回400，实际{r.status_code}：{r.text[:200]}"
+    assert r.json()["code"] == 400
 
 # ============================================================
 # 2. 敏感字段反向断言：响应中不得出现密码/哈希

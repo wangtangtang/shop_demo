@@ -283,13 +283,27 @@ def parse_int_field(value):
         return None, "必须是整数"
     return n, None
 
+def parse_str_field(data, key):
+    """安全取字符串入参：返回 (去空格字符串, None)；缺失/None/非字符串返回 (None, 错误)。
+    不能直接 data.get(key, "").strip()——前端传数字/null/list 时没有 strip()，会抛 500，
+    入口必须先校验类型，非法输入一律返回 400。"""
+    if not isinstance(data, dict) or key not in data or data[key] is None:
+        return None, f"{key}不能为空"
+    value = data[key]
+    if not isinstance(value, str):
+        return None, f"{key}必须是字符串"
+    return value.strip(), None
 
 # ------------ 用户 ------------
 @api_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True) or {}
-    username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
+    username, err_u = parse_str_field(data, "username")
+    password, err_p = parse_str_field(data, "password")
+    if err_u:
+        return jsonify({"code": 400, "msg": err_u}), 400
+    if err_p:
+        return jsonify({"code": 400, "msg": err_p}), 400
 
     if not username or not password:
         return jsonify({"code": 400, "msg": "用户名和密码不能为空"}), 400
@@ -310,8 +324,12 @@ def register():
 @api_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
-    username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
+    username, err_u = parse_str_field(data, "username")
+    password, err_p = parse_str_field(data, "password")
+    if err_u:
+        return jsonify({"code": 400, "msg": err_u}), 400
+    if err_p:
+        return jsonify({"code": 400, "msg": err_p}), 400
 
     user = User.query.filter_by(username=username).first()
     if not user or not user.check_password(password):
