@@ -1,13 +1,4 @@
 ---
-AIGC:
-    Label: "1"
-    ContentProducer: 001191110102MACQD9K64018705
-    ProduceID: 2398458658700201_0-data_volume/7650143508224885028-files/所有对话/主对话/README_shop_demo.md
-    ReservedCode1: ""
-    ContentPropagator: 001191110102MACQD9K64028705
-    PropagateID: 2398458658700201#1791338557830
-    ReservedCode2: ""
----
 # 极客商城 shop_demo
 
 基于 **Flask** 的电商系统，实现了从商品浏览、购物车、下单支付、物流、评价到售后的完整交易闭环，并内置智能客服、售后智能初审、评价标签分析、经营数据看板、RFM 用户分层等 AI / 规则能力。项目同时配套了一套 `pytest + requests` 接口自动化测试。
@@ -218,4 +209,22 @@ pytest test_api -v
 
 ---
 
-> 本内容由 Coze AI 生成，请遵循相关法律法规及《人工智能生成合成内容标识办法》使用与传播。
+## 十、相关截图
+首页
+
+<img width="861" height="1373" alt="image" src="https://github.com/user-attachments/assets/2490bb68-d4d9-4130-8356-8c7fbb538c85" />
+
+订单管理页面
+
+<img width="1234" height="1365" alt="image" src="https://github.com/user-attachments/assets/29739016-a695-4db5-98b0-0b4a1335b10d" />
+
+数据分析页面
+
+<img width="1195" height="1376" alt="image" src="https://github.com/user-attachments/assets/e9b9dc6a-e4bd-4af9-928d-71ec44f87e20" />
+
+智能客服
+
+<img width="932" height="999" alt="image" src="https://github.com/user-attachments/assets/1dbe89b4-5ce9-4a4d-94a9-f411c2112eb4" />
+
+
+
