@@ -28,3 +28,7 @@ htmlcov/
 .vscode/
 .DS_Store
 Thumbs.db
+
+
+# ====作用：后端会把 API Key 存到项目根目录的 .ai_config.json，加入忽略列表后它永远不会被 git 提交。====
+.ai_config.json
