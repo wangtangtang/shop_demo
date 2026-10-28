@@ -3,7 +3,7 @@
 
 基于 **Flask** 的电商系统，实现了从商品浏览、购物车、下单支付、物流、评价到售后的完整交易闭环，并内置智能客服、售后智能初审、评价标签分析、经营数据看板、RFM 用户分层等 AI / 规则能力。项目同时配套了一套 `pytest + requests` 接口自动化测试。
 
-> 毕业设计 / 接口自动化测试练习项目。默认使用本地 SQLite，无需安装数据库即可运行；也支持切换到 MySQL 8。
+> 接口自动化测试练习项目。默认使用本地 SQLite，无需安装数据库即可运行；也支持切换到 MySQL 8。
 
 ---
 
@@ -210,9 +210,18 @@ pytest test_api -v
 ---
 
 ## 十、相关截图
+测试用例
+
+<img width="2503" height="1293" alt="image" src="https://github.com/user-attachments/assets/33cd6109-60e0-4eaa-ad6d-967001d46c62" />
+
 首页
 
 <img width="861" height="1373" alt="image" src="https://github.com/user-attachments/assets/2490bb68-d4d9-4130-8356-8c7fbb538c85" />
+
+商品详情页
+
+<img width="1210" height="1139" alt="image" src="https://github.com/user-attachments/assets/b83f9543-0dff-40ca-bed1-2fdd7b4352d2" />
+
 
 订单管理页面
 
